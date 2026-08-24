@@ -1,0 +1,153 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: resource.k8s.io/v1
+kind: DeviceClass
+metadata:
+  name: dra.hygon.com
+spec:
+  selectors:
+    - cel:
+        expression: |-
+          device.driver == "dra.hygon.com" && device.attributes["dra.hygon.com"].type == "hcu"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hcu-dra-driver-service-account
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hcu-dra-driver-clusterrole
+rules:
+  - apiGroups: ["resource.k8s.io"]
+    resources: ["resourceclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["resource.k8s.io"]
+    resources: ["resourceclaimtemplates"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: ["resource.k8s.io"]
+    resources: ["resourceslices"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: ["resource.k8s.io"]
+    resources: ["resourceclaims/status"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hcu-dra-driver-clusterrole-binding
+subjects:
+  - kind: ServiceAccount
+    name: hcu-dra-driver-service-account
+    namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hcu-dra-driver-clusterrole
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: hcu-dra-driver
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: hcu-dra-driver
+  template:
+    metadata:
+      labels:
+        app: hcu-dra-driver
+    spec:
+      serviceAccountName: hcu-dra-driver-service-account
+      nodeSelector:
+        hcu: "on"
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+      containers:
+        - name: hcu-dra-driver
+          image: harbor.sourcefind.cn:5443/hcu/admin/base/hcu-dra-driver:v1.0.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: CDI_ROOT
+              value: /var/run/cdi
+            - name: KUBELET_REGISTRAR_DIRECTORY_PATH
+              value: /var/lib/kubelet/plugins_registry
+            - name: KUBELET_PLUGINS_DIRECTORY_PATH
+              value: /var/lib/kubelet/plugins
+            # klog verbosity 1-5; use >=4 for Prepare/Unprepare V(4) debug logs
+            - name: LOG_LEVEL
+              value: "5"
+          volumeMounts:
+            - name: plugins-registry
+              mountPath: /var/lib/kubelet/plugins_registry
+            - name: plugins
+              mountPath: /var/lib/kubelet/plugins
+              mountPropagation: Bidirectional
+            - name: cdi
+              mountPath: /var/run/cdi
+            - name: dev
+              mountPath: /dev
+            - name: etc-vdev
+              mountPath: /etc/vdev
+            - name: hyhal
+              readOnly: true
+              mountPath: /opt/hyhal
+            - name: hyhal-local
+              readOnly: true
+              mountPath: /usr/local/hyhal
+            - name: sys
+              mountPath: /sys
+              readOnly: true
+      volumes:
+        - name: plugins-registry
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: DirectoryOrCreate
+        - name: plugins
+          hostPath:
+            path: /var/lib/kubelet/plugins
+            type: DirectoryOrCreate
+        - name: cdi
+          hostPath:
+            path: /var/run/cdi
+            type: DirectoryOrCreate
+        - name: dev
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: etc-vdev
+          hostPath:
+            path: /etc/vdev
+            type: DirectoryOrCreate
+        - name: hyhal
+          hostPath:
+            path: /opt/hyhal
+            type: Directory
+        - name: hyhal-local
+          hostPath:
+            path: /usr/local/hyhal
+            type: Directory
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory

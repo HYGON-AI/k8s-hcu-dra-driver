@@ -1,0 +1,49 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# Physical (whole-card) HCU consumer. Requires kubelet + runtime CDI.
+# Pair with resourceclaim-hcu-physical.yaml (no capacity 鈫?no vHCU on the node).
+#
+# Replace image with your cluster's DTK / hy-smi image if the default is unreachable.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hcu-physical-consumer
+  namespace: hcu-dra-test
+  labels:
+    app: hcu-dra-demo
+    dra.hygon.com/mode: physical
+spec:
+  restartPolicy: Never
+  resourceClaims:
+    - name: hcu-claim-ref
+      resourceClaimName: hcu-claim-physical
+  containers:
+    - name: app
+      image: ubuntu:22.04
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -euo pipefail
+          echo "=== DRA physical card smoke test ==="
+          echo "--- /dev/kfd ---"
+          ls -l /dev/kfd || true
+          echo "--- /dev/dri ---"
+          ls -l /dev/dri || true
+          if [ -f /opt/hyhal/env.sh ]; then
+            # shellcheck disable=SC1091
+            source /opt/hyhal/env.sh
+          fi
+          if command -v hy-smi >/dev/null 2>&1; then
+            echo "--- hy-smi ---"
+            hy-smi
+            echo "--- hy-smi virtual (expect no new vdevice for whole-card) ---"
+            hy-smi virtual -show-vdevice-info || true
+          else
+            echo "WARN: hy-smi not found; check image or PATH"
+          fi
+          echo "=== test done, holding pod for manual exec ==="
+          exec sleep infinity
+      resources:
+        claims:
+          - name: hcu-claim-ref

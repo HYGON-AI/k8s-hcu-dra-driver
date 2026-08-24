@@ -1,0 +1,27 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# Apply after DeviceClass dra.hygon.com exists (see deployment/static/hcu-dra-driver.yaml).
+# Adjust cores/memory to fit ResourceSlice capacity on your node.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaim
+metadata:
+  name: hcu-claim-basic
+  namespace: hcu-dra-test
+spec:
+  devices:
+    requests:
+      - name: hcu
+        exactly:
+          deviceClassName: dra.hygon.com
+          allocationMode: ExactCount
+          count: 1
+          selectors:
+            - cel:
+                expression: |
+                  device.driver == "dra.hygon.com" &&
+                  device.attributes["dra.hygon.com"].type == "hcu"
+          capacity:
+            requests:
+              cores: "60"
+              memory: "20Gi"

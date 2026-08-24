@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# Whole physical HCU pass-through (no vHCU).
+# Do NOT set exactly.capacity 鈥?driver treats missing cores/memory as whole-card mode
+# (see requestCapacityFor in internal/driver/driver.go).
+#
+# Apply after DeviceClass dra.hygon.com exists.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaim
+metadata:
+  name: hcu-claim-physical
+  namespace: hcu-dra-test
+spec:
+  devices:
+    requests:
+      - name: hcu
+        exactly:
+          deviceClassName: dra.hygon.com
+          allocationMode: ExactCount
+          count: 1
+          selectors:
+            - cel:
+                expression: |
+                  device.driver == "dra.hygon.com" &&
+                  device.attributes["dra.hygon.com"].type == "hcu"

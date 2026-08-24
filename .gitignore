@@ -1,0 +1,29 @@
+# Binaries and build artifacts
+/bin/
+/dist/
+/hcu-dra-driver-*.tar
+*.exe
+*.test
+*.out
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and crash dumps
+*.log
+hs_err_pid*.log
+
+# Local scratch / private notes (not part of the release tree)
+问题描述.md
+deployments/examples/pod2.yaml
+deployments/examples/rc2.yaml
+hcu-dcgm-master-*-合规-*.md
+_fix_*.py

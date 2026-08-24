@@ -1,0 +1,61 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# Physical-card demo when CDI is not enabled on kubelet/runtime.
+# Binds the same host paths as k8s-hcu-plugin-v2 Allocate (whole card, no /etc/vdev docker layout).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hcu-physical-consumer-manual
+  namespace: hcu-dra-test
+  labels:
+    app: hcu-dra-demo
+    dra.hygon.com/mode: physical-manual
+spec:
+  restartPolicy: Never
+  resourceClaims:
+    - name: hcu-claim-ref
+      resourceClaimName: hcu-claim-physical
+  containers:
+    - name: app
+      image: harbor.sourcefind.cn:5000/hcu/admin/base/pytorch:2.1.0-ubuntu22.04-dtk24.04.2-py3.10
+      command: ["/bin/bash", "-lc"]
+      args:
+        - |
+          set -euo pipefail
+          echo "=== DRA physical card smoke test (manual hostPath) ==="
+          ls -l /dev/kfd /dev/dri 2>/dev/null || true
+          if [ -f /opt/hyhal/env.sh ]; then source /opt/hyhal/env.sh; fi
+          command -v hy-smi >/dev/null && hy-smi || echo "WARN: hy-smi not found"
+          exec sleep infinity
+      securityContext:
+        privileged: true
+      resources:
+        claims:
+          - name: hcu-claim-ref
+      volumeMounts:
+        - name: dev-kfd
+          mountPath: /dev/kfd
+        - name: hyhal
+          mountPath: /opt/hyhal
+        - name: hyhal-local
+          mountPath: /usr/local/hyhal
+        - name: dev-dri
+          mountPath: /dev/dri
+  volumes:
+    - name: dev-kfd
+      hostPath:
+        path: /dev/kfd
+        type: CharDevice
+    - name: hyhal
+      hostPath:
+        path: /opt/hyhal
+        type: Directory
+    - name: hyhal-local
+      hostPath:
+        path: /usr/local/hyhal
+        type: DirectoryOrCreate
+    - name: dev-dri
+      hostPath:
+        path: /dev/dri
+        type: Directory

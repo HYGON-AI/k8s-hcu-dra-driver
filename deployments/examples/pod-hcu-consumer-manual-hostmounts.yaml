@@ -1,0 +1,60 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+# Fallback when CDI is not enabled on kubelet/runtime: approximate k8s-hcu-plugin-v2
+# Allocate mounts by binding host paths. Use privileged (or fine-grained caps) so device
+# nodes work. Prefer the CDI path (pod-hcu-consumer.yaml) when available.
+#
+# Still use resourceClaims so DRA allocates the claim; extra mounts are for visibility only.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hcu-consumer-manual
+  namespace: hcu-dra-test
+spec:
+  restartPolicy: Never
+  resourceClaims:
+    - name: hcu-claim-ref
+      resourceClaimName: hcu-claim-basic
+  containers:
+    - name: app
+      image: ubuntu:22.04
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true
+      resources:
+        claims:
+          - name: hcu-claim-ref
+      volumeMounts:
+        - name: dev-kfd
+          mountPath: /dev/kfd
+        # If the node has /dev/mkfd, add a CharDevice volume + mount (see k8s-hcu-plugin-v2).
+        - name: hyhal
+          mountPath: /opt/hyhal
+        - name: hyhal-local
+          mountPath: /usr/local/hyhal
+        - name: dev-dri
+          mountPath: /dev/dri
+        - name: etc-vdev
+          mountPath: /etc/vdev
+  volumes:
+    - name: dev-kfd
+      hostPath:
+        path: /dev/kfd
+        type: CharDevice
+    - name: hyhal
+      hostPath:
+        path: /opt/hyhal
+        type: Directory
+    - name: hyhal-local
+      hostPath:
+        path: /usr/local/hyhal
+        type: DirectoryOrCreate
+    - name: dev-dri
+      hostPath:
+        path: /dev/dri
+        type: Directory
+    - name: etc-vdev
+      hostPath:
+        path: /etc/vdev
+        type: DirectoryOrCreate

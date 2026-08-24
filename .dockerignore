@@ -1,0 +1,17 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
+.git
+.gitignore
+**/*.md
+!LICENSE
+!NOTICE
+!THIRD_PARTY_NOTICES.md
+deployments/
+scripts/
+dist/
+*.tar
+*.docx
+*.doc
+**/__pycache__/
+**/*.py
