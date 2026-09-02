@@ -25,6 +25,7 @@ const (
 
 	capacityCoresKey  = "cores"
 	capacityMemoryKey = "memory"
+	capacitySlicesKey = "slices"
 )
 
 type AllocatableDevice struct {
@@ -109,6 +110,12 @@ func (d *AllocatableDevice) GetDevice() resourceapi.Device {
 	stepCore := resource.NewQuantity(1, resource.DecimalSI)
 	stepMem := resource.NewQuantity(1024*1024, resource.BinarySI)
 
+	slicesQty := resource.NewQuantity(MaxVDevicesPerHCU, resource.DecimalSI)
+	slicesMax := resource.NewQuantity(MaxVDevicesPerHCU, resource.DecimalSI)
+	sliceDefault := resource.NewQuantity(1, resource.DecimalSI)
+	sliceMin := resource.NewQuantity(1, resource.DecimalSI)
+	sliceStep := resource.NewQuantity(1, resource.DecimalSI)
+
 	allowed := true
 	device := resourceapi.Device{
 		Name: d.Name,
@@ -149,6 +156,18 @@ func (d *AllocatableDevice) GetDevice() resourceapi.Device {
 						Min:  min0Bin,
 						Max:  memQty,
 						Step: stepMem,
+					},
+				},
+			},
+			// Hardware: at most 4 vHCUs per physical card. Each allocation consumes 1 by default.
+			capacitySlicesKey: {
+				Value: *slicesQty,
+				RequestPolicy: &resourceapi.CapacityRequestPolicy{
+					Default: sliceDefault,
+					ValidRange: &resourceapi.CapacityRequestPolicyRange{
+						Min:  sliceMin,
+						Max:  slicesMax,
+						Step: sliceStep,
 					},
 				},
 			},

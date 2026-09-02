@@ -12,7 +12,7 @@ Hygon HCU DRA Driver 是一个 Kubernetes **Dynamic Resource Allocation (DRA)** 
 |------|------|
 | 物理 HCU 发现与注册 | 通过 DCGM 枚举节点上的空闲物理卡，发布到 `ResourceSlice`（驱动名 `dra.hygon.com`） |
 | 整卡直通 | `ResourceClaim` 不指定 `capacity` 时，整卡分配，不创建 vHCU |
-| 按容量动态切分 vHCU | 在 Claim 中请求 `cores` / `memory` 时，Prepare 阶段动态创建 vHCU，Unprepare 后回收 |
+| 按容量动态切分 vHCU | 在 Claim 中请求 `cores` / `memory` 时，Prepare 阶段动态创建 vHCU，Unprepare 后回收；**单卡最多 4 个 vHCU** |
 | CDI 设备注入 | Prepare 返回 `CDIDeviceIDs`，由容器运行时根据 CDI spec 注入 `/dev/kfd`、`/dev/dri/*`、hyhal 等 |
 | 与 hcu-exporter 联动 | 在 `/etc/vdev/dynamic/` 维护 HAMI 风格标记文件，供 [hcu-exporter](../hcu-exporter) 扫描 |
 | 状态持久化与孤儿清理 | 驱动重启后恢复已 Prepare 的 Claim；定期清理无对应 Pod 的残留 vHCU |
@@ -53,7 +53,7 @@ Hygon HCU DRA Driver 是一个 Kubernetes **Dynamic Resource Allocation (DRA)** 
 | 模式 | Claim 写法 | Prepare 行为 | 适用场景 |
 |------|-----------|-------------|---------|
 | 整卡直通 | 无 `exactly.capacity` | 引用物理卡 CDI spec，不创建 vHCU | 独占整卡训练/推理 |
-| 按容量切分 | 含 `capacity.requests.cores` / `memory` | 动态创建 vHCU，写入 per-vdevice CDI spec | 多租户共享单卡 |
+| 按容量切分 | 含 `capacity.requests.cores` / `memory` | 动态创建 vHCU，写入 per-vdevice CDI spec；单物理卡最多 4 份 | 多租户共享单卡 |
 
 ## 前置要求
 
@@ -317,6 +317,7 @@ kubectl get resourceslice -o yaml
 
 - `allowMultipleAllocations: true`
 - `capacity.cores` / `capacity.memory` 含 `requestPolicy`（`default`、`validRange` 等）
+- `capacity.slices` 为 `4`（单卡最多 4 份；`requestPolicy.default` 为 `1`）
 
 若仅有 `value` 无 `requestPolicy`，说明门控未生效或驱动镜像过旧。
 
@@ -342,7 +343,7 @@ kubectl -n hcu-dra-test get resourceclaim hcu-claim-basic -o yaml
 1. 是否已创建引用该 Claim 的 Pod？
 2. `kubectl describe resourceclaim -n <ns> <name>` 查看事件
 3. `kubectl get resourceslice` 确认有可分配设备
-4. `capacity.requests` 是否超过设备总量（对照 `ResourceSlice` 中 `capacity` 调整）
+4. `capacity.requests` 是否超过设备总量（对照 `ResourceSlice` 中 `capacity` 调整），或同卡是否已有 4 个 vHCU
 5. scheduler 是否启用 `DynamicResourceAllocation` 与 `DRAConsumableCapacity`
 
 ### ResourceSlice 无设备 / `0 allocatable device(s)`
