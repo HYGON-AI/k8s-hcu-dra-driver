@@ -29,12 +29,6 @@ func NewDeviceState(ctx context.Context, opts DeviceStateOptions) (*DeviceState,
 		return nil, fmt.Errorf("dcgm.Init(): %w", err)
 	}
 
-	deviceInfos, err := dcgm.DeviceInfos()
-	if err != nil {
-		_ = dcgm.ShutDown()
-		return nil, fmt.Errorf("dcgm.DeviceInfos(): %w", err)
-	}
-
 	sf := stateFilePath(opts.CDIRoot)
 	prepared, err := loadPreparedState(sf)
 	if err != nil {
@@ -45,9 +39,15 @@ func NewDeviceState(ctx context.Context, opts DeviceStateOptions) (*DeviceState,
 		klog.Infof("Restored %d prepared claim(s) from %s", len(prepared), sf)
 	}
 
-	// Drop vHCUs left on the host after force-delete / driver crash so enumeration is not empty.
+	// Drop vHCUs left on the host after force-delete / driver crash, then re-enumerate
+	// so VDeviceCount reflects the post-reconcile host state.
 	reconcileStaleHostVDevices(prepared)
-	allocatable := buildAllocatableFromDeviceInfos(deviceInfos)
+	deviceInfos, err := dcgm.DeviceInfos()
+	if err != nil {
+		_ = dcgm.ShutDown()
+		return nil, fmt.Errorf("dcgm.DeviceInfos(): %w", err)
+	}
+	allocatable := buildAllocatableFromDeviceInfos(deviceInfos, prepared)
 
 	if err := ensureVDevDynamicDir(); err != nil {
 		_ = dcgm.ShutDown()
