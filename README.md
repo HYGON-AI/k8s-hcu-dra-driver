@@ -347,7 +347,7 @@ kubectl -n hcu-dra-test get resourceclaim hcu-claim-basic -o yaml
 
 ### ResourceSlice 无设备 / `0 allocatable device(s)`
 
-- 节点上已有 vHCU（`VDeviceCount != 0`）：驱动跳过该卡。清理残留 vHCU 或重启驱动（启动时会销毁无 Claim 跟踪的 vHCU）
+- 节点上存在**未跟踪**的残留 vHCU（`VDeviceCount != 0` 且不在 prepared 状态中）：驱动跳过该卡。清理残留 vHCU 或重启驱动（启动/周期任务会销毁无 Claim 跟踪的 vHCU）。已 Prepare 的 vHCU 所在物理卡会继续发布，以便同卡 consumable 共享
 - DCGM 初始化失败：检查驱动日志与节点 HCU 驱动状态
 
 ### Pod Running 但容器内无设备

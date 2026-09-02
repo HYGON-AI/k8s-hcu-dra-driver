@@ -25,8 +25,24 @@ func preparedVDvIndSet(prepared map[types.UID][]PreparedDevice) map[int]struct{}
 	return tracked
 }
 
+// preparedParentDeviceNames returns ResourceSlice device names that currently have a
+// prepared claim (vHCU or whole-card). Those parents must stay published so the
+// scheduler can allocate remaining consumable capacity to later claims.
+func preparedParentDeviceNames(prepared map[types.UID][]PreparedDevice) map[string]struct{} {
+	tracked := make(map[string]struct{})
+	for _, list := range prepared {
+		for _, p := range list {
+			if p.ParentDevice == "" {
+				continue
+			}
+			tracked[p.ParentDevice] = struct{}{}
+		}
+	}
+	return tracked
+}
+
 // reconcileStaleHostVDevices destroys on-host vHCUs that are not tracked in prepared state.
-// Without this, VDeviceCount!=0 causes all physical cards to be skipped and allocatable=0 after restart.
+// Without this, untracked VDeviceCount!=0 would leave cards unpublished after restart.
 func reconcileStaleHostVDevices(prepared map[types.UID][]PreparedDevice) {
 	tracked := preparedVDvIndSet(prepared)
 	vinfos, err := dcgm.VDeviceInfos()
@@ -53,14 +69,23 @@ func reconcileStaleHostVDevices(prepared map[types.UID][]PreparedDevice) {
 	}
 }
 
-func buildAllocatableFromDeviceInfos(deviceInfos []dcgm.DeviceInfo) map[string]*AllocatableDevice {
+func buildAllocatableFromDeviceInfos(deviceInfos []dcgm.DeviceInfo, prepared map[types.UID][]PreparedDevice) map[string]*AllocatableDevice {
+	trackedParents := preparedParentDeviceNames(prepared)
 	allocatable := make(map[string]*AllocatableDevice)
 	for _, di := range deviceInfos {
+		name := canonicalNameFromPCI(di.PciBusNumber)
 		if di.VDeviceCount != 0 {
-			klog.Infof("skip allocatable device pci=%s dvInd=%d: host already has %d vHCU(s); "+
-				"only empty physical cards are published (stale vHCU is removed on startup if not in prepared state)",
+			if _, ok := trackedParents[name]; !ok {
+				// Untracked host vHCUs: do not publish until reconcile removes them.
+				klog.Infof("skip allocatable device pci=%s dvInd=%d: host has %d untracked vHCU(s); "+
+					"card stays unpublished until stale vHCUs are destroyed",
+					di.PciBusNumber, di.DvInd, di.VDeviceCount)
+				continue
+			}
+			// Tracked vHCUs consume capacity via DRA allocations; keep publishing the
+			// parent so later claims can share remaining cores/memory on this card.
+			klog.V(4).Infof("publish allocatable device pci=%s dvInd=%d with %d tracked vHCU(s) for consumable sharing",
 				di.PciBusNumber, di.DvInd, di.VDeviceCount)
-			continue
 		}
 
 		info := DeviceInfo{
@@ -98,7 +123,7 @@ func (s *DeviceState) refreshAllocatable() error {
 	if err != nil {
 		return fmt.Errorf("dcgm.DeviceInfos: %w", err)
 	}
-	s.allocatable = buildAllocatableFromDeviceInfos(deviceInfos)
+	s.allocatable = buildAllocatableFromDeviceInfos(deviceInfos, s.prepared)
 	klog.Infof("Refreshed allocatable devices: %d", len(s.allocatable))
 	return s.createStandardCDISpecFile()
 }
