@@ -110,8 +110,8 @@ func (d *AllocatableDevice) GetDevice() resourceapi.Device {
 	stepCore := resource.NewQuantity(1, resource.DecimalSI)
 	stepMem := resource.NewQuantity(1024*1024, resource.BinarySI)
 
-	slicesQty := resource.NewQuantity(MaxVDevicesPerHCU, resource.DecimalSI)
-	slicesMax := resource.NewQuantity(MaxVDevicesPerHCU, resource.DecimalSI)
+	slicesQty := resource.NewQuantity(DeviceSplitCount, resource.DecimalSI)
+	slicesMax := resource.NewQuantity(DeviceSplitCount, resource.DecimalSI)
 	sliceDefault := resource.NewQuantity(1, resource.DecimalSI)
 	sliceMin := resource.NewQuantity(1, resource.DecimalSI)
 	sliceStep := resource.NewQuantity(1, resource.DecimalSI)
@@ -159,7 +159,7 @@ func (d *AllocatableDevice) GetDevice() resourceapi.Device {
 					},
 				},
 			},
-			// Hardware: at most 4 vHCUs per physical card. Each allocation consumes 1 by default.
+			// Max vHCUs per physical card comes from DEVICE_SPLIT_COUNT. Each allocation consumes 1 by default.
 			capacitySlicesKey: {
 				Value: *slicesQty,
 				RequestPolicy: &resourceapi.CapacityRequestPolicy{

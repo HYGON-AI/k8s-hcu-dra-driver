@@ -34,6 +34,9 @@ func main() {
 	if err := applyLogLevelFromEnv(); err != nil {
 		klog.Fatalf("%v", err)
 	}
+	if err := driver.InitDeviceSplitCountFromEnv(); err != nil {
+		klog.Fatalf("%v", err)
+	}
 	flag.Parse()
 
 	nodeName := getenvDefault("NODE_NAME", "")

@@ -10,12 +10,14 @@ spec:
     - cel:
         expression: |-
           device.driver == "dra.hygon.com" && device.attributes["dra.hygon.com"].type == "hcu"
+
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: hcu-dra-driver-service-account
   namespace: kube-system
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -37,6 +39,7 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch", "update"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -50,6 +53,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: hcu-dra-driver-clusterrole
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -97,6 +101,9 @@ spec:
             # klog verbosity 1-5; use >=4 for Prepare/Unprepare V(4) debug logs
             - name: LOG_LEVEL
               value: "5"
+            # max vHCUs per physical HCU (capacity.slices)
+            - name: DEVICE_SPLIT_COUNT
+              value: "4"
           volumeMounts:
             - name: plugins-registry
               mountPath: /var/lib/kubelet/plugins_registry
