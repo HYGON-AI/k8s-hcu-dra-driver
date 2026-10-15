@@ -88,6 +88,14 @@ func buildAllocatableFromDeviceInfos(deviceInfos []dcgm.DeviceInfo, prepared map
 				di.PciBusNumber, di.DvInd, di.VDeviceCount)
 		}
 
+		numaNode := -1
+		numas, err := dcgm.ShowNumaTopology([]int{di.DvInd})
+		if err != nil {
+			klog.Warningf("failed to query NUMA topology, dvInd=%d pci=%s: %v", di.DvInd, di.PciBusNumber, err)
+		} else if len(numas) > 0 {
+			numaNode = numas[0].NumaNode
+		}
+
 		info := DeviceInfo{
 			DvInd:             di.DvInd,
 			PciBusNumber:      di.PciBusNumber,
@@ -96,6 +104,7 @@ func buildAllocatableFromDeviceInfos(deviceInfos []dcgm.DeviceInfo, prepared map
 			SubsystemTypeName: "",
 			ComputeUnit:       di.ComputeUnit,
 			MemoryTotal:       di.MemoryTotal,
+			NumaNode:          numaNode,
 		}
 
 		alloc, err := newAllocatableDevice(info)
