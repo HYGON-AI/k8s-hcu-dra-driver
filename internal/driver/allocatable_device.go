@@ -23,6 +23,8 @@ const (
 	attributeArchitectureKey = "architecture"
 	attributeBrandKey        = "brand"
 
+	attributeNumaNodeKey = "resource.kubernetes.io/numaNode"
+
 	capacityCoresKey  = "cores"
 	capacityMemoryKey = "memory"
 	capacitySlicesKey = "slices"
@@ -42,6 +44,8 @@ type AllocatableDevice struct {
 	// Capacity
 	ComputeUnits int64
 	MemoryBytes  int64
+
+	NumaNode int
 
 	// For CDI device injection
 	RenderCardNames []string
@@ -70,6 +74,7 @@ func newAllocatableDevice(di DeviceInfo) (*AllocatableDevice, error) {
 		Brand:           di.SubsystemTypeName,
 		ComputeUnits:    int64(math.Round(di.ComputeUnit)),
 		MemoryBytes:     int64(math.Round(di.MemoryTotal)),
+		NumaNode:        di.NumaNode,
 		RenderCardNames: renderCardNames,
 	}, nil
 }
@@ -174,6 +179,12 @@ func (d *AllocatableDevice) GetDevice() resourceapi.Device {
 		},
 		AllowMultipleAllocations: &allowed,
 	}
+	if d.NumaNode >= 0 {
+		device.Attributes[attributeNumaNodeKey] = resourceapi.DeviceAttribute{
+			IntValue: ptr.To(int64(d.NumaNode)),
+		}
+	}
+
 	return device
 }
 
@@ -187,4 +198,5 @@ type DeviceInfo struct {
 	SubsystemTypeName string
 	ComputeUnit       float64
 	MemoryTotal       float64
+	NumaNode          int
 }
