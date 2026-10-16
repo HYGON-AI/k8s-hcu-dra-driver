@@ -31,7 +31,7 @@ MAIN_PKG="./cmd/hcu-dra-driver"
 
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-harbor.sourcefind.cn:5443}"
 IMAGE_REPO="${IMAGE_REPO:-hcu/admin/base/hcu-dra-driver}"
-IMAGE_TAG="${IMAGE_TAG:-v1.0.0}"
+IMAGE_TAG="${IMAGE_TAG:-v1.0.1}"
 IMAGE="${IMAGE_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG}"
 TAR_NAME="hcu-dra-driver-${IMAGE_TAG}.tar"
 TAR_PATH="${DIST_DIR}/${TAR_NAME}"

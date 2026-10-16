@@ -7,7 +7,7 @@ COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md /licenses/
 
 WORKDIR /usr/local/bin
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y --no-install-recommends \
   ca-certificates \
   kmod \
   pciutils \

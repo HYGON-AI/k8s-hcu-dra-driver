@@ -3,7 +3,7 @@ module github.com/HYGON-AI/k8s-hcu-dra-driver
 go 1.25.0
 
 require (
-	github.com/HYGON-AI/hcu-dcgm/v3 v3.0.0
+	github.com/HYGON-AI/hcu-dcgm/v3 v3.0.1
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
 	k8s.io/client-go v0.34.2
